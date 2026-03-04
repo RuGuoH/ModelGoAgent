@@ -14,7 +14,7 @@ from config import (
     PROMPT_TEMPLATE_TXT_REUSE_AMEND,
     logger
 )
-from graph.nodes import input_parser_node1, work_identifier_node, structure_node, analysis_node, input_parser_node, \
+from graph.nodes import input_parser_node1, work_identifier_node, analysis_node, input_parser_node, \
     reuse_method_node, reuse_method_amend_node, generate_code, release_policy_node
 from langchain_core.prompts import PromptTemplate
 from langgraph.graph import StateGraph, START, END
@@ -65,10 +65,6 @@ def create_graph(llm, checkpointer, in_postgres_store=None) -> StateGraph:
             partial(generate_code, llm=llm, prompt_template_work=prompt_template_code)
         )
         graph_builder.add_node(
-            "structure_node",
-            partial(structure_node, llm=llm, prompt_template_system=prompt_template_system, prompt_template_structure=prompt_template_structure)
-        )
-        graph_builder.add_node(
             "analysis_node",
             partial(analysis_node, llm=llm, prompt_template_system=prompt_template_system, prompt_template_analysis=prompt_template_analysis)
         )
@@ -80,9 +76,8 @@ def create_graph(llm, checkpointer, in_postgres_store=None) -> StateGraph:
         graph_builder.add_edge('work_identifier_node', "reuse_node")
         graph_builder.add_edge('reuse_node', "reuse_amend_node")
         graph_builder.add_edge('reuse_amend_node', "code_node")
-        # graph_builder.add_edge('code_node', 'structure_node')
-        # graph_builder.add_edge('structure_node', 'analysis_node')
-        # graph_builder.add_edge("analysis_node", END)
+        graph_builder.add_edge('code_node', 'analysis_node')
+        graph_builder.add_edge("analysis_node", END)
 
         graph_builder.add_edge('code_node', END)
 

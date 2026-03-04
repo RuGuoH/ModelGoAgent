@@ -10,3 +10,4 @@ scripts/tmp_run.py
 /.idea/vcs.xml
 .vscode/settings.json
 agent/graph.png
+.claude/settings.local.json
