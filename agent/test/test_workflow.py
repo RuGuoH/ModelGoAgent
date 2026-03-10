@@ -17,10 +17,7 @@ def main():
     # test_input = "利用wiki数据集将bloom的知识蒸馏到Bert中，然后将此模型与Llama2和BigTranslater融合后出售"
 
     test_input = '''
-            将stocksnap、midjourney、thingverse三个数据集进行融合，记作数据集A。
-            将ccmixter输入由whisper、baize、stable diffusion、i2vgen-xl几个模型依次组成的生成链得到输出，前一个模型的输出作为后一个模型的输入，记作数据集B。
-            将数据集B与vimeo融合得到数据集C。
-            将数据集A与数据集C组合后销售。请问违反了什么许可证问题？
+            将fake_work3和baize打包出售
     '''
 
     # 构造请求体

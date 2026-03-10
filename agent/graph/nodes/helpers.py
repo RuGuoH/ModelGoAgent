@@ -5,7 +5,7 @@ import ast
 import json
 import os
 import re
-from config import logger
+from agent.config import logger
 
 
 def validate_reuse_method_resp(data) -> bool:
@@ -81,8 +81,9 @@ def extract_function_from_file(function_name: str, file_path: str = None) -> str
         包含函数定义的文本字符串，如果未找到则返回空字符串
     """
     if file_path is None:
-        # 默认路径：相对于当前文件的位置
-        file_path = os.path.join("scripts", "reuse_methods.py")
+        # 默认路径：相对于当前文件的位置，定位到项目根下的 scripts/reuse_methods.py
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        file_path = os.path.join(base_dir, "scripts", "reuse_methods.py")
 
     try:
         # 读取文件内容

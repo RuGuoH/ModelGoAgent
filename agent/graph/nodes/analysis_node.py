@@ -1,11 +1,11 @@
 """
 分析节点
 """
-from config import logger
+from agent.config import logger
 from langchain_core.runnables import RunnableConfig
 from langgraph.store.base import BaseStore
-from models import GraphState
-from utils import build_stage_prompt
+from agent.models import GraphState
+from agent.utils import build_stage_prompt
 
 
 def analysis_node(state: GraphState, config: RunnableConfig, *, store: BaseStore, llm=None, prompt_template_system=None, prompt_template_analysis=None):

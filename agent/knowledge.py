@@ -30,4 +30,5 @@ registered_work = {
             "BERT": "bert_model = Work('BERT', 'model', 'raw', 'Apache-2.0') # Text",
             "BLOOM": "bloom_model = Work('BLOOM', 'model', 'raw', 'BigScience-BLOOM-RAIL-1.0') # Text Generation",
             "Llama2": "llama2_model = Work('Llama2', 'model', 'raw', 'Llama2') # Text Generation",
+            "fake_work3": "fake_work3 = Work('tencent/HunyuanVideo-1.5', 'model', 'raw', 'Unknow')"
         }

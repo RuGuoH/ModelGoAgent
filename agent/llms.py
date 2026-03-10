@@ -15,19 +15,19 @@ logger = logging.getLogger(__name__)
 MODEL_CONFIGS = {
     "openai": {
         "base_url": os.getenv("OPENAI_BASE_URL", "https://api.chatanywhere.tech/v1"),
-        "api_key": os.getenv("OPENAI_API_KEY", ""),
+        "api_key": os.getenv("OPENAI_API_KEY", "sk-ysFuVYmcidngAs9ZkSPuqDzkGfJFediolRzHXH8Af7OaDH90"),
         "chat_model": "gpt-4o-mini",
         "embedding_model": "text-embedding-3-small"
     },
     "oneapi": {
         "base_url": os.getenv("ONEAPI_BASE_URL", "http://139.224.72.218:3000/v1"),
-        "api_key": os.getenv("ONEAPI_API_KEY", ""),
+        "api_key": os.getenv("ONEAPI_API_KEY", "sk-EDjbeeCYkD1OnI9E48018a018d2d4f44958798A261137591"),
         "chat_model": "qwen-max",
         "embedding_model": "text-embedding-v1"
     },
     "qwen": {
         "base_url": os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-        "api_key": os.getenv("QWEN_API_KEY", ""),
+        "api_key": os.getenv("QWEN_API_KEY", "sk-6cf518b3423b441b8a1e881b2432d178"),
         "chat_model": "qwen-max",
         "embedding_model": "text-embedding-v1"
     },

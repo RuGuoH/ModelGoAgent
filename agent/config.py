@@ -43,3 +43,9 @@ DB_CONNECTION_KWARGS = {
 DB_MAX_SIZE = 20
 
 E2B_API_KEY = os.getenv("E2B_API_KEY", "")
+
+# 许可证分析用 LLM（未知许可证识别与建模）
+LICENSE_LLM_API_KEY = os.getenv("LICENSE_LLM_API_KEY", "")
+LICENSE_LLM_MODEL = os.getenv("LICENSE_LLM_MODEL", "deepseek")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN", "")

@@ -2,21 +2,33 @@
 API 路由处理
 """
 import json
+import os
+import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
 
-from config import logger, DB_URI, DB_CONNECTION_KWARGS, DB_MAX_SIZE, LLM_TYPE
+from agent.config import (
+    logger,
+    DB_URI,
+    DB_CONNECTION_KWARGS,
+    DB_MAX_SIZE,
+    LLM_TYPE,
+    LICENSE_LLM_API_KEY,
+    LICENSE_LLM_MODEL,
+    GITHUB_TOKEN,
+)
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
-from graph import create_graph
-from langgraph.checkpoint.postgres import PostgresSaver
-from langgraph.store.postgres import PostgresStore
-from llms import get_llm
-from models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionResponseChoice, Message
+from agent.graph import create_graph
+#from langgraph.checkpoint.postgres import PostgresSaver
+#from langgraph.store.postgres import PostgresStore
+from agent.llms import get_llm
+from agent.models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionResponseChoice, Message
 from psycopg_pool import ConnectionPool
-from utils import format_response, save_graph_visualization
+from agent.utils import format_response, save_graph_visualization
 from langgraph.checkpoint.memory import MemorySaver
+
 
 # 申明全局变量
 graph = None
@@ -32,6 +44,22 @@ async def lifespan(app: FastAPI):
     # 启动时执行
     try:
         logger.info("正在初始化模型、定义 Graph...")
+
+        # 配置许可证分析用 LLM（供 scripts 内 license_parser / llm_license_helper 使用）
+        _scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
+        if _scripts_dir not in sys.path:
+            sys.path.insert(0, _scripts_dir)
+        if LICENSE_LLM_API_KEY:
+            try:
+                # 始终通过模块名 `llm_license_helper` 导入，避免出现 `scripts.llm_license_helper` 与 `llm_license_helper` 两份模块
+                from llm_license_helper import set_api_key
+                set_api_key(api_key=LICENSE_LLM_API_KEY, model=LICENSE_LLM_MODEL, github_token=GITHUB_TOKEN or None)
+                logger.info("许可证分析 LLM 已配置: model=%s", LICENSE_LLM_MODEL)
+            except Exception as e:
+                logger.warning("配置许可证分析 LLM 失败（未知许可证将使用保守策略）: %s", e)
+        else:
+            logger.debug("未设置 LICENSE_LLM_API_KEY，未知许可证将使用保守策略")
+
         # 初始化 LLM
         llm, embedding = get_llm(LLM_TYPE)
 

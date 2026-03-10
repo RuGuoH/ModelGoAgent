@@ -9,12 +9,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from config import logger, SEPARATOR
-from knowledge import registered_work
+from agent.config import logger, SEPARATOR
+from agent.knowledge import registered_work
 from langchain_core.runnables import RunnableConfig
 from langgraph.store.base import BaseStore
-from models import GraphState, Work
-from utils import build_stage_prompt
+from agent.models import GraphState, Work
+from agent.utils import build_stage_prompt
 from e2b_code_interpreter import Sandbox
 
 def input_parser_node(state: GraphState, config: RunnableConfig, *, store: BaseStore):

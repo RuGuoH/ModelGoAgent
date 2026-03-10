@@ -1,10 +1,10 @@
 """
 输入解析节点
 """
-from config import logger, SEPARATOR
+from agent.config import logger, SEPARATOR
 from langchain_core.runnables import RunnableConfig
 from langgraph.store.base import BaseStore
-from models import GraphState
+from agent.models import GraphState
 
 # 输入自然语言描述的项目
 def input_parser_node(state: GraphState, config: RunnableConfig, *, store: BaseStore):

@@ -3,7 +3,7 @@
 """
 from functools import partial
 
-from config import (
+from agent.config import (
     PROMPT_TEMPLATE_TXT_SYS,
     PROMPT_TEMPLATE_TXT_STR,
     PROMPT_TEMPLATE_TXT_ANA,
@@ -14,11 +14,11 @@ from config import (
     PROMPT_TEMPLATE_TXT_REUSE_AMEND,
     logger
 )
-from graph.nodes import input_parser_node1, work_identifier_node, analysis_node, input_parser_node, \
+from agent.graph.nodes import input_parser_node1, work_identifier_node, analysis_node, input_parser_node, \
     reuse_method_node, reuse_method_amend_node, generate_code, release_policy_node
 from langchain_core.prompts import PromptTemplate
 from langgraph.graph import StateGraph, START, END
-from models import GraphState
+from agent.models import GraphState
 
 
 def create_graph(llm, checkpointer, in_postgres_store=None) -> StateGraph:
@@ -30,14 +30,14 @@ def create_graph(llm, checkpointer, in_postgres_store=None) -> StateGraph:
         graph_builder = StateGraph(GraphState)
 
         # ------- 加载 prompt 模板 -------
-        prompt_template_system = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_SYS)
-        prompt_template_structure = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_STR)
-        prompt_template_analysis = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_ANA)
-        prompt_template_work = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_WORK)
-        prompt_template_reuse = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_REUSE)
-        prompt_template_reuse_amend = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_REUSE_AMEND)
-        prompt_template_code = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_CODE)
-        prompt_template_policy = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_POLICY)
+        prompt_template_system = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_SYS, encoding="utf-8")
+        prompt_template_structure = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_STR, encoding="utf-8")
+        prompt_template_analysis = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_ANA, encoding="utf-8")
+        prompt_template_work = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_WORK, encoding="utf-8")
+        prompt_template_reuse = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_REUSE, encoding="utf-8")
+        prompt_template_reuse_amend = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_REUSE_AMEND, encoding="utf-8")
+        prompt_template_code = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_CODE, encoding="utf-8")
+        prompt_template_policy = PromptTemplate.from_file(PROMPT_TEMPLATE_TXT_POLICY, encoding="utf-8")
 
 
         # ===== 注册节点 =====

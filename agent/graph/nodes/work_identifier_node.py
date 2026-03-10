@@ -2,12 +2,12 @@
 Work 识别节点
 """
 import json
-from config import logger
-from knowledge import registered_work
+from agent.config import logger
+from agent.knowledge import registered_work
 from langchain_core.runnables import RunnableConfig
 from langgraph.store.base import BaseStore
-from models import GraphState, Work
-from utils import build_stage_prompt
+from agent.models import GraphState, Work
+from agent.utils import build_stage_prompt
 
 
 def work_identifier_node(state: GraphState, config: RunnableConfig, *, store: BaseStore, llm=None, prompt_template_work=None):

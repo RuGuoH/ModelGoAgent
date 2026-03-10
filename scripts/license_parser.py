@@ -1,4 +1,5 @@
 import logging
+import os
 from collections import defaultdict
 from copy import copy
 
@@ -6,17 +7,17 @@ import yaml
 from tabulate import tabulate
 
 from works import Work, EVENT
+from llm_license_helper import llm_helper
+
 
 """ Use for standardize the string list of license rights """
 def standardize_string_list(string_list):
-    # Capitalize and replace underscore
     processed_list = []
     for string in string_list:
         processed_string = string.title().replace("_", " ")
         processed_list.append(processed_string)
-    # String list -> String seperated with comma
-    standard_string = ", ".join(processed_list)
-    return standard_string
+    return ", ".join(processed_list)
+
 
 class License(object):
     def __init__(self, license_meta, usages_dict):
@@ -24,100 +25,72 @@ class License(object):
         self.usages_dict = usages_dict
         self.full_name = license_meta["full_name"]
         self.short_id = license_meta["short_id"]
-
-        # Modified by parser
         self.relicense = False
-        #self.caution = {'restrictions':defaultdict(list), 'rights':defaultdict(list), 'warnings':defaultdict(list)}
 
     def is_public(self):
-        if "public" in self.meta["categories"]:
-            return True
-        return False
-    
+        return "public" in self.meta["categories"]
+
     def is_public_domain(self):
-        if "Public Domain" in self.meta["labels"]:
-            return True
-        return False
-        
+        return "Public Domain" in self.meta["labels"]
+
     def is_copyleft(self):
-        if "copyleft" in self.meta["categories"]:
-            return True
-        return False
-    
+        return "copyleft" in self.meta["categories"]
+
     def is_disclose(self):
-        if "disclose" in self.meta["categories"]:
-            return True
-        return False
-    
+        return "disclose" in self.meta["categories"]
+
     def is_auto_relicensing(self):
-        if 'auto-relicensing' in self.meta["categories"]:
-            return True
-        return False
-    
+        return "auto-relicensing" in self.meta["categories"]
+
     def is_permissive(self):
-        if "permissive" in self.meta["categories"]:
-            return True
-        return False
-    
+        return "permissive" in self.meta["categories"]
+
     def is_irrevocable(self):
-        if "irrevocable" in self.meta["rights_prefix"]:
-            return True
-        return False
-    
+        return "irrevocable" in self.meta["rights_prefix"]
+
     def has_compat(self):
-        return 'compat' in self.meta
-    
+        return "compat" in self.meta
+
     def get_compat_list(self):
-        if 'compat' not in self.meta: 
-            return None # Return None if not compat list is provided
-        else:
-            return self.meta.get('compat')
-    
+        return self.meta.get("compat") if "compat" in self.meta else None
+
     def get_incompat_list(self):
-        if 'incompat' not in self.meta: 
-            return None
-        else:
-            return self.meta.get('incompat')
-    
-    # Check whether a right can be granted, such as modify, use, sublicense
-    def is_granted_right(self, right:str):
-        if self.is_public_domain(): # Always return true for public domain licenses
+        return self.meta.get("incompat") if "incompat" in self.meta else None
+
+    def is_granted_right(self, right: str):
+        if self.is_public_domain():
             return True
-        elif right in self.meta["rights"]:
+        if right in self.meta["rights"]:
             return True
-        elif right in self.meta["reserved_rights"]:
+        if right in self.meta["reserved_rights"]:
             return False
         return "NODEF"
-    
-    # Check whether this license can be apply to a work in "type" (model, data, software)
-    def is_supported_work_type(self, type:str):
+
+    def is_supported_work_type(self, type: str):
         if type in self.meta["categories"]:
             return True
-        
-        # Models can be regarded as software
-        elif "software" in self.meta["categories"] and type == "model":
+        if "software" in self.meta["categories"] and type == "model":
             return True
-        
         return False
-    
+
     def get_share_coverage(self) -> list:
-        if 'coverage' in self.meta:
-            return self.meta['coverage']
-        return []
-    
-    # Generate a summary of this license
+        return self.meta.get("coverage", [])
+
     def summary(self, save_path=None):
         notices = []
-        if self.is_copyleft() is True: notices.append("Copyleft")
-        if self.is_irrevocable() is False: notices.append("Revocable")
-        if self.is_public() is False: notices.append("Not Public")
+        if self.is_copyleft():
+            notices.append("Copyleft")
+        if not self.is_irrevocable():
+            notices.append("Revocable")
+        if not self.is_public():
+            notices.append("Not Public")
         data = [
-            ["License Name",        self.full_name],
-            ["License Tags",        standardize_string_list(self.meta['categories'])],
-            ["Granted Rights",      standardize_string_list(self.meta['rights'])],
-            ["Reserved Rights",     standardize_string_list(self.meta['reserved_rights'])],
-            ["Notices for Use",     "None" if notices == [] else ', '.join(notices)],
-            ["Full Text Link",      self.meta['url']]
+            ["License Name", self.full_name],
+            ["License Tags", standardize_string_list(self.meta["categories"])],
+            ["Granted Rights", standardize_string_list(self.meta["rights"])],
+            ["Reserved Rights", standardize_string_list(self.meta["reserved_rights"])],
+            ["Notices for Use", "None" if not notices else ", ".join(notices)],
+            ["Full Text Link", self.meta["url"]],
         ]
         text = tabulate(data, tablefmt="plain")
         if save_path:
@@ -130,65 +103,74 @@ class License(object):
 
 class Parser(object):
     def __init__(self, path):
+        # 允许传入相对路径：自动相对于当前文件所在目录解析，避免受工作目录影响
+        if not os.path.isabs(path):
+            base_dir = os.path.dirname(__file__)
+            path = os.path.join(base_dir, path)
         self.path = path
         try:
-            # Read the Summaried License Description from YAML file
-            licenses_file = open(path)
-            yml_content = yaml.safe_load(licenses_file)
-            licenses_file.close()
+            with open(self.path, encoding="utf-8") as licenses_file:
+                yml_content = yaml.safe_load(licenses_file)
             usages_dict, licenses_list = yml_content[0], yml_content[1:]
         except IOError:
-            logging.error(f"Failed to open the licenses file in {path}.")
+            logging.error("Failed to open the licenses file in %s.", self.path)
+            usages_dict, licenses_list = {}, []
 
-        # Use the short id as index of licenses dict
         self.licenses_dict = {}
         for li in licenses_list:
             if "short_id" in li:
                 license_meta = li
-                self.licenses_dict[li["short_id"]] = License(license_meta, usages_dict)
-
+                obj = License(license_meta, usages_dict)
+                self.licenses_dict[li["short_id"]] = obj
         self.licenses_list = list(self.licenses_dict.keys())
 
-    def detect_license_version(self, license_name) -> tuple[str, bool]: # Return the license name removed version, bool indicates whether contain version info
-        if '-' in license_name:
-            maybe_name, maybe_ver_str = license_name.rsplit('-', 1)
-            if maybe_ver_str.replace('.','').isdigit(): # The license name contains version number
+    def detect_license_version(self, license_name) -> tuple[str, bool]:
+        if "-" in license_name:
+            maybe_name, maybe_ver_str = license_name.rsplit("-", 1)
+            if maybe_ver_str.replace(".", "").isdigit():
                 return maybe_name, True
-        return license_name, False # Version number no found
+        return license_name, False
 
-    def __find_matching_license(self, license_name, ignore_case=True, approx_match=True) -> tuple[str, bool]:
-        """
-        def remove_version(license_name): # Remove the version number in license's name
-            if '-' in license_name:
-                maybe_name, maybe_ver_str = license_name.rsplit('-', 1)
-                if maybe_ver_str.replace('.','').isdigit(): # The license name contains version number
-                    return maybe_name
-            return license_name # Version number no found
-        """
-        
+    def __find_matching_license(self, license_name, ignore_case: bool = True, approx_match: bool = True) -> tuple[str, bool]:
         matching, exact_ver = None, False
-        names_list = [name for name in self.licenses_list]
+        names_list = list(self.licenses_list)
         if ignore_case:
-            license_name = license_name.casefold()
-            names_list = [name.casefold() for name in names_list]
-        if license_name in names_list:
-            matching = license_name
-            exact_ver = True
-        elif approx_match: # Ignore the version if no exact result
-            license_name = self.detect_license_version(license_name)[0]
-            names_list = [self.detect_license_version(name)[0] for name in names_list]
-            matching = license_name if self.detect_license_version(license_name)[0] in [self.detect_license_version(name)[0] for name in names_list] else None
-        if matching:
-            idx = names_list.index(matching)
-            return self.licenses_list[idx], exact_ver # Return the name in license description, exact_ver is true if the version number is also matching
-        return '', exact_ver
+            target = license_name.casefold()
+            for name in names_list:
+                if name.casefold() == target:
+                    matching = name
+                    exact_ver = True
+                    break
+        else:
+            if license_name in names_list:
+                matching = license_name
+                exact_ver = True
+
+        if not matching and approx_match:
+            base_name, has_version = self.detect_license_version(license_name)
+            if ignore_case:
+                base_name = base_name.casefold()
+            for name in names_list:
+                license_base_name, _ = self.detect_license_version(name)
+                if ignore_case:
+                    if license_base_name.casefold() == base_name:
+                        matching = name
+                        exact_ver = not has_version
+                        break
+                else:
+                    if license_base_name == base_name:
+                        matching = name
+                        exact_ver = not has_version
+                        break
+
+        return matching or "", exact_ver
     
     def print_supported_license_names(self):
         print(self.licenses_list)
         return
     
     # Register license for the work or a list of works
-    def register_license(self, work:Work, relicense=False):
+    def register_license(self, work: Work, relicense: bool = False):
         if isinstance(work, list):    
             licenses = [self.register_license(w) for w in work]
             return licenses
@@ -196,33 +178,77 @@ class Parser(object):
         if work.license_name == 'TBD':
             logging.warning(f"The license name of Work {work.name} is not specified")
             return None
+        # 处理 Unknown 许可证，尝试通过 LLM / API 自动识别
+        if isinstance(work.license_name, str) and work.license_name.lower() == "unknow":
+            try:
+                license_name, error = llm_helper.handle_unknown_license(work.name)
+                work.license_name = license_name
+                logging.info("Updated license for %s from Unknow to %s", work.name, license_name)
+            except Exception as e:
+                logging.error("Failed to handle unknown license for %s: %s", work.name, e)
 
-        # Create a new license instance by name
         license = self.clone_license(work.license_name)
         if license is None:
-            logging.error(f"Cannot find the license decription of {work.license_name} in {self.path}")
+            logging.error("Cannot find the license decription of %s in %s", work.license_name, self.path)
             work.add_event(EVENT.LICENSE_NO_FOUND_ERROR)
             return None
-        
+
         if self.work_type_check(license, work) == False:
             work.add_event(EVENT.LICENSE_TYPE_MISMATCH_WARNING)
             logging.warning(f"{license.short_id} is no suitable for {work.name} ({work.type}) licensing")
 
         if work.is_registered() and relicense == False:
-            logging.debug(f"{work.name} already has {license.short_id} license, ignore the license registration")
+            logging.debug("%s already has %s license, ignore the license registration", work.name, license.short_id)
         else:
-            work.set_license(license) # Set the license instanct and fresh the license name of this work
-            logging.debug(f"{work.name} is registered as {work.license_name}")
+            work.set_license(license)
+            logging.debug("%s is registered as %s", work.name, work.license_name)
         return license
 
 
-    # Return a copy of license by name, return none if no found
-    def clone_license(self, license_name, approx_match=True) -> License:
+    def clone_license(self, license_name: str, approx_match: bool = True) -> License | None:
+        """
+        根据名称查找并克隆 License；若本地不存在，则尝试调用 LLM 生成新的条目。
+        """
         match_license, exact_ver = self.__find_matching_license(license_name, approx_match)
         if match_license:
-            logging.debug(f"Find the matching license: {match_license}, version matching: {exact_ver}")
+            logging.debug("Find the matching license: %s, version matching: %s", match_license, exact_ver)
             clone = copy(self.licenses_dict[match_license])
             return clone
+
+        # 本地未找到：尝试用 LLM 自动建模该许可证
+        logging.info("License %s not found in local database. Attempting to analyze with LLM...", license_name)
+        try:
+            license_data = llm_helper.get_license_data(license_name)
+            if license_data:
+                # 复用任意已有 license 的 usages_dict（所有许可证共用）；若无则用与 licenses_description.yml 一致的默认
+                any_license = next(iter(self.licenses_dict.values()), None)
+                if any_license:
+                    usages_dict = any_license.usages_dict
+                else:
+                    usages_dict = {
+                        "copy": ["use"],
+                        "use": ["use"],
+                        "share": ["redistribute", "sublicense"],
+                        "sell": ["redistribute", "sublicense", "commercial_use"],
+                        "modify": ["modify"],
+                        "train": ["use", "modify"],
+                        "combine": ["use", "merge"],
+                        "combine_mix": ["use", "merge"],
+                        "amalgamate": ["use", "modify"],
+                        "distill": ["use"],
+                        "generate": ["use"],
+                        "embed": ["use", "modify"],
+                        "stat": ["use"],
+                    }
+                new_obj = License(license_data, usages_dict)
+                self.licenses_dict[license_name] = new_obj
+                self.licenses_list.append(license_name)
+                logging.info("Successfully added %s to license database using LLM analysis", license_name)
+                return copy(new_obj)
+            logging.warning("Failed to analyze %s with LLM", license_name)
+        except Exception as e:
+            logging.error("Error while using LLM to analyze %s: %s", license_name, e)
+
         return None
     
     # Check whether the license can support this type of work (software, model, data). Note, work maybe unregistered.
@@ -250,9 +276,10 @@ class Parser(object):
         # Then, determine license for 'TBD' works by call license_analysis
         works_sequence = [w for w, _ in work.find_relied_works() if w.license_name == 'TBD'] + [work]
         for alys_work in works_sequence:
-            if self.license_analysis(alys_work) == False:
+            if self.license_analysis(alys_work) is False:
                 logging.error('License analysis failed, the final license type could not be determined.')
-                exit(1) # failure
+                # 在服务端场景不再强制退出整个进程，返回 False 由调用方决定如何处理
+                return False
         
         # 2, Check the rights granting for reuse and open (such as share, sell)
         self.rights_granting_analysis(work, open_policy)
@@ -502,8 +529,9 @@ class Parser(object):
                     work.add_event(EVENT.RIGHT_NO_GRANT_ERROR(rw.name, right))
                     logging.error(f"The required {right} right is not granted by Work {rw.name}")
                 elif is_granted == 'NODEF':
-                    work.add_event(getattr(EVENT, (right + '_NO_GRANT_WARNING').upper())(rw.name, right))
-                    logging.warn(f"The required {right} right is not explicity granted by Work {rw.name}")
+                    # 若许可证未明确授予该权利，则统一记为通用的 RIGHT_NO_GRANT_WARNING 事件
+                    work.add_event(EVENT.RIGHT_NO_GRANT_WARNING(rw.name, right))
+                    logging.warn(f"The required {right} right is not explicitly granted by Work {rw.name}")
         return
 
     def restrictions_analysis(self, work:Work, open_policy:str=''): # open_plicy -> no use

@@ -5,9 +5,6 @@ import re
 import gradio as gr
 import requests
 
-# Author:@南哥AGI研习社 (B站 or YouTube 搜索“南哥AGI研习社”)
-
-
 # 设置日志模版
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
